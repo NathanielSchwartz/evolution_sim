@@ -1,13 +1,13 @@
 import random
 import math
 import csv
+import datetime
 
 map_size = 100  # the width and height of the map
 starting_pop = 100  # the starting population of the three species
-sim_cycles = 100  # how many generations the simulation runs before ending
+sim_cycles = 10  # how many generations the simulation runs before ending
 food_amount = 600  # the amount of food generated at the start of each generation
 sim_times = 1  # how many times the simulation runs
-
 
 class Lifeform():
 
@@ -219,15 +219,12 @@ def movement(lifeform, list_of_food):
     closest_distance = 101
     closest_food_x = 0
     closest_food_y = 0
-    for i in list_of_food:
-        food_distance = int(
-            round(math.sqrt(math.pow(lifeform.getx() - i.getx(), 2) + math.pow(lifeform.gety() - i.gety(), 2)), 0))
-        if food_distance <= lifeform.getforaging():
-            if food_distance < closest_distance:
-                closest_distance = food_distance
-                closest_food_x = i.getx()
-                closest_food_y = i.gety()
-    if closest_distance < 101:
+    for food in list_of_food:
+        food_distance = math.sqrt(
+            math.pow(lifeform.getx() - food.getx(), 2) + math.pow(lifeform.gety() - food.gety(), 2))
+        if food_distance < closest_distance:
+            closest_distance, closest_food_x, closest_food_y = food_distance, food.getx(), food.gety()
+    if closest_distance <= lifeform.getforaging():
         # DEBUGGING
         # print("closest_distance < 101")
         # ---------
@@ -381,21 +378,21 @@ def enemycollision(list_of_species):
 
 def foodcollision(list_of_species, list_of_food):
     print("FOOD COLLISION")
-    for i in range(len(list_of_food)):
+    for food in list_of_food:
         lifeform_count = 0
         for j in list_of_species:
             for k in j.getlistoflifeforms():
-                if list_of_food[i].getx() == k.getx() and list_of_food[i].gety() == k.gety():
+                if food.getx() == k.getx() and food.gety() == k.gety():
                     lifeform_count += 1
-        for j in list_of_species:
-            for k in j.getlistoflifeforms():
-                if list_of_food[i].getx() == k.getx() and list_of_food[i].gety() == k.gety():
-                    k.setenergy(k.getenergy() + list_of_food[i].getenergy() / lifeform_count)
-                    if k.getenergy() > 100:
-                        k.setenergy(100)
-                    k.setgot_food(True)
         if lifeform_count > 0:
-            list_of_food[i].setx(-1)
+            for j in list_of_species:
+                for k in j.getlistoflifeforms():
+                    if food.getx() == k.getx() and food.gety() == k.gety():
+                        k.setenergy(k.getenergy() + food.getenergy() / lifeform_count)
+                        if k.getenergy() > 100:
+                            k.setenergy(100)
+                        k.setgot_food(True)
+            food.setx(-1)
     list_of_food = [x for x in list_of_food if not x.getx() == -1]
     return list_of_food
 
@@ -403,15 +400,11 @@ def foodcollision(list_of_species, list_of_food):
 def movecycles(list_of_species, list_of_food):
     print("MOVE CYCLE INITIATION")
     generation_complete = False
-    for i in list_of_species:
-        for j in i.getlistoflifeforms():
-            j.setgot_food(False)
+    [[lifeform.setgot_food(False) for lifeform in i.getlistoflifeforms()] for i in list_of_species]
     while not generation_complete:
         print("MOVEMENT")
         for i in list_of_species:
-            for j in i.getlistoflifeforms():
-                if j.got_food() == False:
-                    movement(j, list_of_food)
+            [movement(j, list_of_food) for j in i.getlistoflifeforms() if not j.got_food()]
         deathcheck(list_of_species)
         enemycollision(list_of_species)
         deathcheck(list_of_species)
@@ -419,11 +412,11 @@ def movecycles(list_of_species, list_of_food):
         test_complete = True
         for i in list_of_species:
             for j in i.getlistoflifeforms():
-                if j.got_food() == False:
+                if not j.got_food():
                     test_complete = False
                     generation_complete = False
                 else:
-                    if test_complete == True:
+                    if test_complete:
                         generation_complete = True
     return list_of_food
 
@@ -545,7 +538,12 @@ def startup(sim_times):
 
 
 # Initiates Program
-# Prints simulation number then runs the simulation
+# Prints simulation number, then runs the simulation
+
+startTime = datetime.datetime.now()
 for i in range(sim_times):
     print(i + 1)
     startup(i + 1)
+
+endTime = datetime.datetime.now()
+print(endTime - startTime)
